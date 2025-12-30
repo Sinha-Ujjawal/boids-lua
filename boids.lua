@@ -6,6 +6,7 @@ local boids = {}
 local vector2 = require("./vector2")
 local conf = require("./conf")
 local loveUtils = require("./loveUtils")
+local triangle = require("./triangle")
 
 boids.SCREEN_WRAP = vector2.new(conf.WIDTH, conf.HEIGHT)
 boids.MAX_FORCE = 0.025
@@ -65,10 +66,14 @@ end
 ---@param boid Boid
 function boids.draw(boid)
 	local pos = boid.position
-	loveUtils.drawWithLineWidth(3, function()
-		loveUtils.drawWithColor(loveUtils.colorFromBytes(255, 255, 255), function()
-			love.graphics.circle("line", pos.x, pos.y, 1)
-		end)
+	loveUtils.drawWithColor(loveUtils.colorFromBytes(255, 255, 255), function()
+		--love.graphics.circle("line", pos.x, pos.y, 1)
+		local t = triangle.fromBaseAndHeight(vector2.new(pos.x - 3, pos.y), 6, 7)
+		local angle = vector2.angle(vector2.new(0, -1), boid.velocity)
+		t = triangle.rotate(t, angle)
+		love.graphics.line(t.v1.x, t.v1.y, t.v2.x, t.v2.y)
+		love.graphics.line(t.v2.x, t.v2.y, t.v3.x, t.v3.y)
+		love.graphics.line(t.v3.x, t.v3.y, t.v1.x, t.v1.y)
 	end)
 end
 
