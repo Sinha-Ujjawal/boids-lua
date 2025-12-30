@@ -27,6 +27,13 @@ function boids.new(position, velocity, acceleration)
 	return { position = position, velocity = velocity, acceleration = acceleration }
 end
 
+---Creates a new boid as a copy of the other
+---@param boid Boid boid to copy
+---@return Boid
+function boids.copy(boid)
+	return boids.new(boid.position, boid.velocity, boid.acceleration)
+end
+
 ---Initialize a new Boid
 ---@return Boid
 function boids.initial()
@@ -34,6 +41,16 @@ function boids.initial()
 	local velocity = vector2.random(-0.5, 0.5, -0.5, 0.5)
 	local acceleration = vector2.new(0, 0)
 	return boids.new(position, velocity, acceleration)
+end
+
+---Checks if two boids have same position, velocity, and acceleration
+---@param boid1 Boid
+---@param boid2 Boid
+---@return boolean
+function boids.areSame(boid1, boid2)
+	return vector2.equal(boid1.position, boid2.position)
+		and vector2.equal(boid1.velocity, boid2.velocity)
+		and vector2.equal(boid1.acceleration, boid2.acceleration)
 end
 
 ---Updated the boids position and velocity
@@ -61,7 +78,7 @@ end
 ---@return Vector2 Steering force required for alignment
 function boids.align(boid, otherBoids)
 	local avgVelocity = vector2.avg(otherBoids, function(other)
-		if boid == other then -- exclude itself
+		if boids.areSame(boid, other) then -- exclude itself
 			return nil
 		end
 		local d = vector2.eucledianDistance(boid.position, other.position)
@@ -85,7 +102,7 @@ end
 ---@return Vector2 Steering force required for cohesion
 function boids.cohesion(boid, otherBoids)
 	local avgPosition = vector2.avg(otherBoids, function(other)
-		if boid == other then -- exclude itself
+		if boids.areSame(boid, other) then -- exclude itself
 			return nil
 		end
 		local d = vector2.eucledianDistance(boid.position, other.position)
@@ -110,7 +127,7 @@ end
 ---@return Vector2 Steering force required for separation
 function boids.separation(boid, otherBoids)
 	local avgDiffs = vector2.avg(otherBoids, function(other)
-		if boid == other then -- exclude itself
+		if boids.areSame(boid, other) then -- exclude itself
 			return nil
 		end
 		local d = vector2.eucledianDistance(boid.position, other.position)

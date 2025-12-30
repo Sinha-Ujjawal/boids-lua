@@ -36,8 +36,13 @@ end
 ---@param dt number delta time in milliseconds
 function love.update(dt)
 	_ = dt -- UNUSED
+	---@type Boid[]
+	local origFlock = {}
+	for i, boid in ipairs(gameState.flock) do
+		origFlock[i] = boids.copy(boid)
+	end
 	for _, boid in ipairs(gameState.flock) do
-		boids.flock(boid, gameState.flock)
+		boids.flock(boid, origFlock)
 		boids.update(boid)
 	end
 end

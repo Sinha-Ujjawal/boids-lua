@@ -266,4 +266,12 @@ function vector2.avg(items, mapFn)
 	return vector2.new(sumX, sumY)
 end
 
+---Checks if two vectors are equal
+---@param vec1 Vector2
+---@param vec2 Vector2
+---@return boolean
+function vector2.equal(vec1, vec2)
+	return vec1.x == vec2.x and vec1.y == vec2.y
+end
+
 return vector2
