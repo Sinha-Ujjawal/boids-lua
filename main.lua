@@ -1,4 +1,7 @@
 local boids = require("./boids")
+local bbox = require("./bbox")
+local conf = require("./conf")
+local quadTree = require("./quadTree")
 local loveUtils = require("./loveUtils")
 
 local lick = require("./libraries/LICK/lick")
@@ -7,12 +10,16 @@ lick.updateAllFiles = true
 lick.clearPackages = true
 
 ---@class GameState
----@field flock Boid[]
+---@field flock QuadTree
 ---@field showFPS boolean
+
+local function newQuadTree()
+	return quadTree.new(bbox.new(0, 0, conf.WIDTH, conf.HEIGHT), 32, 8)
+end
 
 ---@type GameState
 local gameState = {
-	flock = {},
+	flock = newQuadTree(),
 	showFPS = false,
 }
 
@@ -23,16 +30,20 @@ function love.load(arg, unfilteredArg)
 	_ = arg -- UNUSED
 	_ = unfilteredArg -- UNUSED
 	math.randomseed(os.time()) -- Seed random number
-	for i = 1, 100 do
-		gameState.flock[i] = boids.initial()
+	gameState.flock = newQuadTree()
+	for _ = 1, 500 do
+		local b = boids.initial()
+		quadTree.insert(gameState.flock, { point = b.position, data = b })
 	end
 end
 
 ---Callback function used to draw on the screen every frame.
 function love.draw()
-	for _, boid in ipairs(gameState.flock) do
+	quadTree.forEach(gameState.flock, function(p)
+		---@type Boid
+		local boid = p.data
 		boids.draw(boid)
-	end
+	end)
 	if gameState.showFPS then
 		local fps = tostring(love.timer.getFPS())
 		loveUtils.drawWithColor(loveUtils.colorFromBytes(255, 0, 0), function()
@@ -41,19 +52,49 @@ function love.draw()
 	end
 end
 
+local BOIDS_PERCEPTION_HALVED = boids.PERCEPTION / 2
+
+---Returns array of boids which are within the perception limit of the point
+---@param flock QuadTree
+---@param point Vector2
+---@return Boid[]
+local function boidsAroundMe(flock, point)
+	local bb = bbox.new(
+		point.x - BOIDS_PERCEPTION_HALVED,
+		point.y - BOIDS_PERCEPTION_HALVED,
+		boids.PERCEPTION,
+		boids.PERCEPTION
+	)
+	---@type Boid[]
+	local boidsToFlockWith = {}
+	quadTree.forEachWithinBBox(flock, bb, function(p)
+		---@type Boid
+		local boid = p.data
+		table.insert(boidsToFlockWith, boid)
+	end)
+	return boidsToFlockWith
+end
+
 ---Callback function used to update the state of the game every frame.
 ---@param dt number delta time in milliseconds
 function love.update(dt)
 	_ = dt -- UNUSED
-	---@type Boid[]
-	local origFlock = {}
-	for i, boid in ipairs(gameState.flock) do
-		origFlock[i] = boids.copy(boid)
-	end
-	for _, boid in ipairs(gameState.flock) do
-		boids.flock(boid, origFlock)
+	local flockSnapshot = newQuadTree()
+	quadTree.forEach(gameState.flock, function(p)
+		---@type Boid
+		local boid = p.data
+		quadTree.insert(flockSnapshot, { point = p.point, data = boids.copy(boid) })
+	end)
+	quadTree.forEach(gameState.flock, function(p)
+		---@type Boid
+		local boid = p.data
+		local boidsToFlockWith = boidsAroundMe(flockSnapshot, p.point)
+		boids.flock(boid, boidsToFlockWith)
 		boids.update(boid)
-	end
+		quadTree.movePoint(gameState.flock, p.point, boid.position, function(other)
+			return p.data == other.data
+		end)
+	end)
 end
 
 ---Callback function triggered when a keyboard key is released.
