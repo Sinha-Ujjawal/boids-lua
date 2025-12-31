@@ -1,0 +1,6 @@
+[submodule "libraries/LICK"]
+	path = libraries/LICK
+	url = https://codeberg.org/usysrc/LICK.git
+[submodule "libraries/love2d"]
+	path = libraries/love2d
+	url = https://github.com/LuaCATS/love2d.git
