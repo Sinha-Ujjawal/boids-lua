@@ -31,7 +31,7 @@ function love.load(arg, unfilteredArg)
 	_ = unfilteredArg -- UNUSED
 	math.randomseed(os.time()) -- Seed random number
 	gameState.flock = newQuadTree()
-	for _ = 1, 500 do
+	for _ = 1, 1000 do
 		local b = boids.initial()
 		quadTree.insert(gameState.flock, { point = b.position, data = b })
 	end

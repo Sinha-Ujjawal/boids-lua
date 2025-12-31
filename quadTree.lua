@@ -100,7 +100,7 @@ end
 ---@param acc Point[]?
 ---@return Point[]?
 local function queryBBoxFromNode(qtNode, bb, acc)
-	if not bbox.checkCollision(qtNode.boundary, bb) then
+	if not bbox.intersects(qtNode.boundary, bb) then
 		return acc
 	end
 	if acc == nil then
@@ -191,7 +191,7 @@ end
 ---@param acc Point[]?
 ---@return Point[]?
 local function deleteFromNodeWithinBBox(qtNode, bb, fn, acc)
-	if not bbox.checkCollision(qtNode.boundary, bb) then
+	if not bbox.intersects(qtNode.boundary, bb) then
 		return acc
 	end
 	---@type Point[]
@@ -242,7 +242,7 @@ end
 ---@param bb BBox
 ---@param fn fun(p: Point):any
 local function forEachNodeWithinBBox(qtNode, bb, fn)
-	if not bbox.checkCollision(qtNode.boundary, bb) then
+	if not bbox.intersects(qtNode.boundary, bb) then
 		return
 	end
 	for _, point in ipairs(qtNode.points) do

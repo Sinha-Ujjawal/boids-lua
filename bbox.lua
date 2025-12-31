@@ -73,4 +73,15 @@ function bbox.checkCollision(bbox1, bbox2)
 		and bbox1.y + bbox1.height > bbox2.y
 end
 
+---Checks if two BBox are intersecting using Simple AABB (Axis-Aligned Bounding Box) Detection
+---@param bbox1 BBox
+---@param bbox2 BBox
+---@return boolean
+function bbox.intersects(bbox1, bbox2)
+	return bbox1.x <= bbox2.x + bbox2.width
+		and bbox1.x + bbox1.width >= bbox2.x
+		and bbox1.y <= bbox2.y + bbox2.height
+		and bbox1.y + bbox1.height >= bbox2.y
+end
+
 return bbox
