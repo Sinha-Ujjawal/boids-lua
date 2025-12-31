@@ -1,4 +1,5 @@
 local boids = require("./boids")
+local loveUtils = require("./loveUtils")
 
 local lick = require("./libraries/LICK/lick")
 lick.reset = true
@@ -7,10 +8,12 @@ lick.clearPackages = true
 
 ---@class GameState
 ---@field flock Boid[]
+---@field showFPS boolean
 
 ---@type GameState
 local gameState = {
 	flock = {},
+	showFPS = false,
 }
 
 ---This function is called exactly once at the beginning of the game.
@@ -29,6 +32,12 @@ end
 function love.draw()
 	for _, boid in ipairs(gameState.flock) do
 		boids.draw(boid)
+	end
+	if gameState.showFPS then
+		local fps = tostring(love.timer.getFPS())
+		loveUtils.drawWithColor(loveUtils.colorFromBytes(255, 0, 0), function()
+			love.graphics.print("FPS: " .. fps, 10, 10)
+		end)
 	end
 end
 
@@ -54,5 +63,8 @@ function love.keyreleased(key, scancode)
 	_ = scancode -- UNUSED
 	if key == "r" then
 		love.load()
+	end
+	if key == "f" then
+		gameState.showFPS = not gameState.showFPS
 	end
 end
