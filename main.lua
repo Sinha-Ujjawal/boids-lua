@@ -1,7 +1,7 @@
 local boids = require("./boids")
 local bbox = require("./bbox")
 local conf = require("./conf")
-local quadTree = require("./quadTree")
+local quadTree2 = require("./quadTree2")
 local loveUtils = require("./loveUtils")
 
 local lick = require("./libraries/LICK/lick")
@@ -10,11 +10,11 @@ lick.updateAllFiles = true
 lick.clearPackages = true
 
 ---@class GameState
----@field flock QuadTree
+---@field flock QuadTree2
 ---@field showFPS boolean
 
 local function newQuadTree()
-	return quadTree.new(bbox.new(0, 0, conf.WIDTH, conf.HEIGHT), 32, 8)
+	return quadTree2.new(bbox.new(0, 0, conf.WIDTH, conf.HEIGHT), 32, 8)
 end
 
 ---@type GameState
@@ -33,13 +33,13 @@ function love.load(arg, unfilteredArg)
 	gameState.flock = newQuadTree()
 	for _ = 1, 1000 do
 		local b = boids.initial()
-		quadTree.insert(gameState.flock, { point = b.position, data = b })
+		quadTree2.insert(gameState.flock, { point = b.position, data = b })
 	end
 end
 
 ---Callback function used to draw on the screen every frame.
 function love.draw()
-	quadTree.forEach(gameState.flock, function(p)
+	quadTree2.forEach(gameState.flock, function(p)
 		---@type Boid
 		local boid = p.data
 		boids.draw(boid)
@@ -47,7 +47,7 @@ function love.draw()
 	if gameState.showFPS then
 		local fps = tostring(love.timer.getFPS())
 		loveUtils.drawWithColor(loveUtils.colorFromBytes(255, 0, 0), function()
-			love.graphics.print("FPS: " .. fps, 10, 10)
+			love.graphics.print("FPS: " .. fps .. ", num of points: " .. quadTree2.count(gameState.flock), 10, 10)
 		end)
 	end
 end
@@ -55,15 +55,15 @@ end
 local BOIDS_PERCEPTION_HALVED = boids.PERCEPTION / 2
 
 ---Update all boids to new position, velocity and acceleration
----@param flock QuadTree
+---@param flock QuadTree2
 local function updateAllBoids(flock)
 	---@type Boid[]
 	local temp = {}
-	local offX = boids.PERCEPTION * 2
-	local offY = boids.PERCEPTION * 2
+	local offX = boids.PERCEPTION * 3
+	local offY = boids.PERCEPTION * 3
 	for x = 0, conf.WIDTH - 1, offX do
 		for y = 0, conf.HEIGHT - 1, offY do
-			quadTree.forEachWithinScope(
+			quadTree2.forEachWithinScope(
 				flock,
 				bbox.new(x, y, offX, offY),
 				-BOIDS_PERCEPTION_HALVED,
@@ -87,7 +87,7 @@ local function updateAllBoids(flock)
 	for _, boid in ipairs(temp) do
 		local oldPos = boid.position
 		boids.update(boid)
-		quadTree.movePoint(flock, oldPos, boid.position, function(other)
+		quadTree2.movePoint(flock, oldPos, boid.position, function(other)
 			return boid == other.data
 		end)
 	end
