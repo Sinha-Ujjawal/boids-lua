@@ -75,26 +75,32 @@ local function boidsAroundMe(flock, point)
 	return boidsToFlockWith
 end
 
+---Update all boids to new position, velocity and acceleration
+---@param flock QuadTree
+local function updateAllBoids(flock)
+	---@type Boid[]
+	local temp = {}
+	quadTree.forEach(flock, function(p)
+		---@type Boid
+		local boid = p.data
+		local boidsToFlockWith = boidsAroundMe(flock, p.point)
+		boids.flock(boid, boidsToFlockWith)
+		temp[#temp + 1] = boid
+	end)
+	for _, boid in ipairs(temp) do
+		local oldPos = boid.position
+		boids.update(boid)
+		quadTree.movePoint(flock, oldPos, boid.position, function(other)
+			return boid == other.data
+		end)
+	end
+end
+
 ---Callback function used to update the state of the game every frame.
 ---@param dt number delta time in milliseconds
 function love.update(dt)
 	_ = dt -- UNUSED
-	local flockSnapshot = newQuadTree()
-	quadTree.forEach(gameState.flock, function(p)
-		---@type Boid
-		local boid = p.data
-		quadTree.insert(flockSnapshot, { point = p.point, data = boids.copy(boid) })
-	end)
-	quadTree.forEach(gameState.flock, function(p)
-		---@type Boid
-		local boid = p.data
-		local boidsToFlockWith = boidsAroundMe(flockSnapshot, p.point)
-		boids.flock(boid, boidsToFlockWith)
-		boids.update(boid)
-		quadTree.movePoint(gameState.flock, p.point, boid.position, function(other)
-			return p.data == other.data
-		end)
-	end)
+	updateAllBoids(gameState.flock)
 end
 
 ---Callback function triggered when a keyboard key is released.

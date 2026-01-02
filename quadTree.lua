@@ -112,10 +112,18 @@ local function queryBBoxFromNode(qtNode, bb, acc)
 		end
 	end
 	if qtNode.subdivided then
-		acc = queryBBoxFromNode(qtNode.quad1, bb, acc)
-		acc = queryBBoxFromNode(qtNode.quad2, bb, acc)
-		acc = queryBBoxFromNode(qtNode.quad3, bb, acc)
-		acc = queryBBoxFromNode(qtNode.quad4, bb, acc)
+		if bbox.intersects(qtNode.quad1.boundary, bb) then
+			acc = queryBBoxFromNode(qtNode.quad1, bb, acc)
+		end
+		if bbox.intersects(qtNode.quad2.boundary, bb) then
+			acc = queryBBoxFromNode(qtNode.quad2, bb, acc)
+		end
+		if bbox.intersects(qtNode.quad3.boundary, bb) then
+			acc = queryBBoxFromNode(qtNode.quad3, bb, acc)
+		end
+		if bbox.intersects(qtNode.quad4.boundary, bb) then
+			acc = queryBBoxFromNode(qtNode.quad4, bb, acc)
+		end
 	end
 	return acc
 end
@@ -173,10 +181,18 @@ local function deleteFromNode(qtNode, point, fn, acc)
 	end
 	qtNode.points = nonDeletedPoints
 	if qtNode.subdivided then
-		acc = deleteFromNode(qtNode.quad1, point, fn, acc)
-		acc = deleteFromNode(qtNode.quad2, point, fn, acc)
-		acc = deleteFromNode(qtNode.quad3, point, fn, acc)
-		acc = deleteFromNode(qtNode.quad4, point, fn, acc)
+		if bbox.contains(qtNode.quad1.boundary, point) then
+			acc = deleteFromNode(qtNode.quad1, point, fn, acc)
+		end
+		if bbox.contains(qtNode.quad2.boundary, point) then
+			acc = deleteFromNode(qtNode.quad2, point, fn, acc)
+		end
+		if bbox.contains(qtNode.quad3.boundary, point) then
+			acc = deleteFromNode(qtNode.quad3, point, fn, acc)
+		end
+		if bbox.contains(qtNode.quad4.boundary, point) then
+			acc = deleteFromNode(qtNode.quad4, point, fn, acc)
+		end
 		if acc and childrensAreEmpty(qtNode) then
 			forgetChildren(qtNode)
 		end
@@ -208,10 +224,18 @@ local function deleteFromNodeWithinBBox(qtNode, bb, fn, acc)
 	end
 	qtNode.points = nonDeletedPoints
 	if qtNode.subdivided then
-		acc = deleteFromNodeWithinBBox(qtNode.quad1, bb, fn, acc)
-		acc = deleteFromNodeWithinBBox(qtNode.quad2, bb, fn, acc)
-		acc = deleteFromNodeWithinBBox(qtNode.quad3, bb, fn, acc)
-		acc = deleteFromNodeWithinBBox(qtNode.quad4, bb, fn, acc)
+		if bbox.intersects(qtNode.quad1.boundary, bb) then
+			acc = deleteFromNodeWithinBBox(qtNode.quad1, bb, fn, acc)
+		end
+		if bbox.intersects(qtNode.quad2.boundary, bb) then
+			acc = deleteFromNodeWithinBBox(qtNode.quad2, bb, fn, acc)
+		end
+		if bbox.intersects(qtNode.quad3.boundary, bb) then
+			acc = deleteFromNodeWithinBBox(qtNode.quad3, bb, fn, acc)
+		end
+		if bbox.intersects(qtNode.quad4.boundary, bb) then
+			acc = deleteFromNodeWithinBBox(qtNode.quad4, bb, fn, acc)
+		end
 		if acc and childrensAreEmpty(qtNode) then
 			forgetChildren(qtNode)
 		end
@@ -251,10 +275,18 @@ local function forEachNodeWithinBBox(qtNode, bb, fn)
 		end
 	end
 	if qtNode.subdivided then
-		forEachNodeWithinBBox(qtNode.quad1, bb, fn)
-		forEachNodeWithinBBox(qtNode.quad2, bb, fn)
-		forEachNodeWithinBBox(qtNode.quad3, bb, fn)
-		forEachNodeWithinBBox(qtNode.quad4, bb, fn)
+		if bbox.intersects(qtNode.quad1.boundary, bb) then
+			forEachNodeWithinBBox(qtNode.quad1, bb, fn)
+		end
+		if bbox.intersects(qtNode.quad2.boundary, bb) then
+			forEachNodeWithinBBox(qtNode.quad2, bb, fn)
+		end
+		if bbox.intersects(qtNode.quad3.boundary, bb) then
+			forEachNodeWithinBBox(qtNode.quad3, bb, fn)
+		end
+		if bbox.intersects(qtNode.quad4.boundary, bb) then
+			forEachNodeWithinBBox(qtNode.quad4, bb, fn)
+		end
 	end
 end
 
@@ -302,10 +334,18 @@ local function movePointInNode(qt, qtNode, point, newPosition, fn, acc)
 		end
 	end
 	if qtNode.subdivided then
-		acc = movePointInNode(qt, qtNode.quad1, point, newPosition, fn, acc)
-		acc = movePointInNode(qt, qtNode.quad2, point, newPosition, fn, acc)
-		acc = movePointInNode(qt, qtNode.quad3, point, newPosition, fn, acc)
-		acc = movePointInNode(qt, qtNode.quad4, point, newPosition, fn, acc)
+		if bbox.contains(qtNode.quad1.boundary, point) then
+			acc = movePointInNode(qt, qtNode.quad1, point, newPosition, fn, acc)
+		end
+		if bbox.contains(qtNode.quad2.boundary, point) then
+			acc = movePointInNode(qt, qtNode.quad2, point, newPosition, fn, acc)
+		end
+		if bbox.contains(qtNode.quad3.boundary, point) then
+			acc = movePointInNode(qt, qtNode.quad3, point, newPosition, fn, acc)
+		end
+		if bbox.contains(qtNode.quad4.boundary, point) then
+			acc = movePointInNode(qt, qtNode.quad4, point, newPosition, fn, acc)
+		end
 		if acc and childrensAreEmpty(qtNode) then
 			forgetChildren(qtNode)
 		end
