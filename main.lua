@@ -54,39 +54,36 @@ end
 
 local BOIDS_PERCEPTION_HALVED = boids.PERCEPTION / 2
 
----Returns array of boids which are within the perception limit of the point
----@param flock QuadTree
----@param point Vector2
----@return Boid[]
-local function boidsAroundMe(flock, point)
-	local bb = bbox.new(
-		point.x - BOIDS_PERCEPTION_HALVED,
-		point.y - BOIDS_PERCEPTION_HALVED,
-		boids.PERCEPTION,
-		boids.PERCEPTION
-	)
-	---@type Boid[]
-	local boidsToFlockWith = {}
-	quadTree.forEachWithinBBox(flock, bb, function(p)
-		---@type Boid
-		local boid = p.data
-		table.insert(boidsToFlockWith, boid)
-	end)
-	return boidsToFlockWith
-end
-
 ---Update all boids to new position, velocity and acceleration
 ---@param flock QuadTree
 local function updateAllBoids(flock)
 	---@type Boid[]
 	local temp = {}
-	quadTree.forEach(flock, function(p)
-		---@type Boid
-		local boid = p.data
-		local boidsToFlockWith = boidsAroundMe(flock, p.point)
-		boids.flock(boid, boidsToFlockWith)
-		temp[#temp + 1] = boid
-	end)
+	local offX = boids.PERCEPTION * 2
+	local offY = boids.PERCEPTION * 2
+	for x = 0, conf.WIDTH - 1, offX do
+		for y = 0, conf.HEIGHT - 1, offY do
+			quadTree.forEachWithinScope(
+				flock,
+				bbox.new(x, y, offX, offY),
+				-BOIDS_PERCEPTION_HALVED,
+				-BOIDS_PERCEPTION_HALVED,
+				boids.PERCEPTION,
+				boids.PERCEPTION,
+				function(p, neighborsWithinScope)
+					---@type Boid
+					local boid = p.data
+					---@type Boid[]
+					local boidsToFlockWith = {}
+					for _, np in ipairs(neighborsWithinScope) do
+						boidsToFlockWith[#boidsToFlockWith + 1] = np.data
+					end
+					boids.flock(boid, boidsToFlockWith)
+					temp[#temp + 1] = boid
+				end
+			)
+		end
+	end
 	for _, boid in ipairs(temp) do
 		local oldPos = boid.position
 		boids.update(boid)

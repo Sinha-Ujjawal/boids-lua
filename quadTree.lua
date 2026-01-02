@@ -11,6 +11,7 @@ local bbox = require("./bbox")
 ---@field boundary   BBox
 ---@field points     Point[]
 ---@field depth      number
+---@field parent     QuadTreeNode?
 ---@field subdivided boolean
 ---@field quad1      QuadTreeNode?
 ---@field quad2      QuadTreeNode?
@@ -25,20 +26,36 @@ local bbox = require("./bbox")
 ---Create a new QuadTreeNode with a given boundary
 ---@param boundary BBox Boundary of the QuadTreeNode
 ---@param depth number
+---@param parent QuadTreeNode?
 ---@return QuadTreeNode
-local function newNode(boundary, depth)
-	return { boundary = boundary, points = {}, depth = depth, subdivided = false }
+local function newNode(boundary, depth, parent)
+	return { boundary = boundary, points = {}, depth = depth, parent = parent, subdivided = false }
 end
 
 ---Subdivides the given QuadTreeNode
 ---@param qtNode QuadTreeNode
 local function subdivideNode(qtNode)
 	local quad1, quad2, quad3, quad4 = bbox.toQuads(qtNode.boundary)
-	qtNode.quad1 = newNode(quad1, qtNode.depth + 1)
-	qtNode.quad2 = newNode(quad2, qtNode.depth + 1)
-	qtNode.quad3 = newNode(quad3, qtNode.depth + 1)
-	qtNode.quad4 = newNode(quad4, qtNode.depth + 1)
+	qtNode.quad1 = newNode(quad1, qtNode.depth + 1, qtNode)
+	qtNode.quad2 = newNode(quad2, qtNode.depth + 1, qtNode)
+	qtNode.quad3 = newNode(quad3, qtNode.depth + 1, qtNode)
+	qtNode.quad4 = newNode(quad4, qtNode.depth + 1, qtNode)
 	qtNode.subdivided = true
+end
+
+---Finds the first ancestor of a quad tree node which satisfies the filter
+---@param qtNode QuadTreeNode
+---@param filter fun(q: QuadTreeNode): boolean
+---@return QuadTreeNode?
+local function findFirstAncestorSatifying(qtNode, filter)
+	local ret = qtNode.parent
+	while ret ~= nil do
+		if filter(ret) then
+			return ret
+		end
+		ret = ret.parent
+	end
+	return ret
 end
 
 ---Add a point to the given QuadTreeNode. If capacity is exceeded, it will insert to the appropriate children
@@ -53,7 +70,7 @@ local function insertIntoNode(qtNode, capacity, maxDepth, point)
 	end
 
 	if qtNode.depth > maxDepth or #qtNode.points < capacity then
-		table.insert(qtNode.points, point)
+		qtNode.points[#qtNode.points + 1] = point
 		return true
 	end
 
@@ -108,7 +125,7 @@ local function queryBBoxFromNode(qtNode, bb, acc)
 	end
 	for _, point in ipairs(qtNode.points) do
 		if bbox.contains(bb, point.point) then
-			table.insert(acc, point)
+			acc[#acc + 1] = point
 		end
 	end
 	if qtNode.subdivided then
@@ -150,9 +167,13 @@ end
 ---Frees the children of the QuadTreeNode
 ---@param qtNode QuadTreeNode
 local function forgetChildren(qtNode)
+	qtNode.quad1.parent = nil
 	qtNode.quad1 = nil
+	qtNode.quad2.parent = nil
 	qtNode.quad2 = nil
+	qtNode.quad3.parent = nil
 	qtNode.quad3 = nil
+	qtNode.quad4.parent = nil
 	qtNode.quad4 = nil
 	qtNode.subdivided = false
 end
@@ -174,9 +195,9 @@ local function deleteFromNode(qtNode, point, fn, acc)
 			if acc == nil then
 				acc = {}
 			end
-			table.insert(acc, p)
+			acc[#acc + 1] = p
 		else
-			table.insert(nonDeletedPoints, p)
+			nonDeletedPoints[#nonDeletedPoints + 1] = p
 		end
 	end
 	qtNode.points = nonDeletedPoints
@@ -217,9 +238,9 @@ local function deleteFromNodeWithinBBox(qtNode, bb, fn, acc)
 			if acc == nil then
 				acc = {}
 			end
-			table.insert(acc, point)
+			acc[#acc + 1] = point
 		else
-			table.insert(nonDeletedPoints, point)
+			nonDeletedPoints[#nonDeletedPoints + 1] = point
 		end
 	end
 	qtNode.points = nonDeletedPoints
@@ -290,6 +311,58 @@ local function forEachNodeWithinBBox(qtNode, bb, fn)
 	end
 end
 
+---Run a function for each point falling within a scope in the quad tree node
+---A scope is a bbox (main) and an offset with width and height defining bbox for each
+---point that lies inside the main bbox.
+---@param qtNode QuadTreeNode
+---@param bb BBox
+---@param ox number
+---@param oy number
+---@param wx number
+---@param wy number
+---@param fn fun(p: Point, neighborsWithinScope: Point[]):any
+local function forEachNodeWithinScope(qtNode, bb, ox, oy, wx, wy, fn)
+	if not bbox.intersects(qtNode.boundary, bb) then
+		return
+	end
+	for _, point in ipairs(qtNode.points) do
+		if bbox.contains(bb, point.point) then
+			---@type Point[]
+			local neighborsWithinScope = {}
+			local bboxAroundPoint = bbox.new(point.point.x + ox, point.point.y + oy, wx, wy)
+			if qtNode.parent == nil or bbox.containsBBox(qtNode.boundary, bboxAroundPoint) then
+				forEachNodeWithinBBox(qtNode, bboxAroundPoint, function(p)
+					neighborsWithinScope[#neighborsWithinScope + 1] = p
+				end)
+			else
+				local validAncestor = findFirstAncestorSatifying(qtNode, function(q)
+					return q.parent == nil -- is the root
+						or bbox.containsBBox(q.boundary, bboxAroundPoint)
+				end)
+				assert(validAncestor ~= nil)
+				forEachNodeWithinBBox(validAncestor, bboxAroundPoint, function(p)
+					neighborsWithinScope[#neighborsWithinScope + 1] = p
+				end)
+			end
+			fn(point, neighborsWithinScope)
+		end
+	end
+	if qtNode.subdivided then
+		if bbox.intersects(qtNode.quad1.boundary, bb) then
+			forEachNodeWithinScope(qtNode.quad1, bb, ox, oy, wx, wy, fn)
+		end
+		if bbox.intersects(qtNode.quad2.boundary, bb) then
+			forEachNodeWithinScope(qtNode.quad2, bb, ox, oy, wx, wy, fn)
+		end
+		if bbox.intersects(qtNode.quad3.boundary, bb) then
+			forEachNodeWithinScope(qtNode.quad3, bb, ox, oy, wx, wy, fn)
+		end
+		if bbox.intersects(qtNode.quad4.boundary, bb) then
+			forEachNodeWithinScope(qtNode.quad4, bb, ox, oy, wx, wy, fn)
+		end
+	end
+end
+
 ---Moves a given point to new position in the QuadTreeNode
 ---@param qt QuadTree
 ---@param qtNode QuadTreeNode
@@ -308,7 +381,7 @@ local function movePointInNode(qt, qtNode, point, newPosition, fn, acc)
 				if acc == nil then
 					acc = {}
 				end
-				table.insert(acc, p)
+				acc[#acc + 1] = p
 				qtNode.points[idx] = { point = newPosition, data = p.data }
 			end
 		end
@@ -322,15 +395,25 @@ local function movePointInNode(qt, qtNode, point, newPosition, fn, acc)
 				if acc == nil then
 					acc = {}
 				end
-				table.insert(acc, p)
-				table.insert(pointsToReinsert, { point = newPosition, data = p.data })
+				acc[#acc + 1] = p
+				pointsToReinsert[#pointsToReinsert + 1] = { point = newPosition, data = p.data }
 			else
-				table.insert(newQtNodePoints, p)
+				newQtNodePoints[#newQtNodePoints + 1] = p
 			end
 		end
 		if #pointsToReinsert > 0 then
 			qtNode.points = newQtNodePoints
-			quadTree.insertMany(qt, pointsToReinsert)
+			---@type QuadTreeNode?
+			local nearestRoot = qtNode
+			if qtNode.parent ~= nil then
+				nearestRoot = findFirstAncestorSatifying(qtNode, function(q)
+					return q.parent == nil or bbox.contains(q.boundary, newPosition)
+				end)
+			end
+			assert(nearestRoot ~= nil)
+			for _, p in ipairs(pointsToReinsert) do
+				insertIntoNode(nearestRoot, qt.capacity, qt.maxDepth, p)
+			end
 		end
 	end
 	if qtNode.subdivided then
@@ -431,6 +514,20 @@ end
 ---@param fn fun(p: Point):any
 function quadTree.forEachWithinBBox(qt, bb, fn)
 	forEachNodeWithinBBox(qt.root, bb, fn)
+end
+
+---Run a function for each point falling within a scope in the quad tree
+---A scope is a bbox (main) and an offset with width and height defining bbox for each
+---point that lies inside the main bbox.
+---@param qt QuadTree
+---@param bb BBox
+---@param ox number
+---@param oy number
+---@param wx number
+---@param wy number
+---@param fn fun(p: Point, neighborsWithinScope: Point[]):any
+function quadTree.forEachWithinScope(qt, bb, ox, oy, wx, wy, fn)
+	forEachNodeWithinScope(qt.root, bb, ox, oy, wx, wy, fn)
 end
 
 ---Moves the given point to the new position in the quad tree

@@ -1,5 +1,7 @@
 local bbox = {}
 
+local vector2 = require("./vector2")
+
 ---@class BBox
 ---@field x number
 ---@field y number
@@ -22,6 +24,32 @@ end
 ---@return boolean
 function bbox.contains(bb, point)
 	return point.x >= bb.x and point.x < bb.x + bb.width and point.y >= bb.y and point.y < bb.y + bb.height
+end
+
+---Returns all four corners of the bbox
+---@param bb BBox
+---@return Vector2 ul upper left corner
+---@return Vector2 ur upper right corner
+---@return Vector2 bl bottom left corner
+---@return Vector2 br bottom right corner
+function bbox.corners(bb)
+	local ul = vector2.new(bb.x, bb.y)
+	local ur = vector2.new(bb.x + bb.width - 1, bb.y)
+	local bl = vector2.new(bb.x, bb.y + bb.height - 1)
+	local br = vector2.new(bb.x + bb.width - 1, bb.y + bb.height - 1)
+	return ul, ur, bl, br
+end
+
+---Checks if the other bbox lies inside given bbox
+---@param bbox1 BBox
+---@param bbox2 BBox
+---@return boolean
+function bbox.containsBBox(bbox1, bbox2)
+	local ul, ur, bl, br = bbox.corners(bbox2)
+	return bbox.contains(bbox1, ul)
+		and bbox.contains(bbox1, ur)
+		and bbox.contains(bbox1, bl)
+		and bbox.contains(bbox1, br)
 end
 
 ---Breaks the given BBox into its four equal adjacent quads
