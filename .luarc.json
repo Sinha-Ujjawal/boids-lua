@@ -1,0 +1,20 @@
+{
+  "runtime": {
+    "version": "LuaJIT"
+  },
+  "diagnostics": {
+    "globals": [
+      "love"
+    ]
+  },
+  "workspace": {
+    "library": [
+      "./libraries/love2d",
+      "./libraries/LICK"
+    ],
+    "checkThirdParty": false
+  },
+  "telemetry": {
+    "enable": false
+  }
+}
